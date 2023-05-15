@@ -1,6 +1,33 @@
 import React, { useMemo } from "react";
 import { useTable, useExpanded } from "react-table";
 
+function renderRow(row, visibleColumns) {
+  return (
+    <React.Fragment key={row.getRowProps().key}>
+      <tr>
+        {row.cells.map(cell => {
+          return <td {...cell.getCellProps()}>{cell.render('Cell')}</td>
+        })}
+      </tr>
+      {row.isExpanded ? (
+        <tr>
+          <td colSpan={visibleColumns.length}>
+            {row.values.key} Details:
+            {row.subRows.map(subRow => {
+              return (
+                <div key={subRow.id}>
+                  {subRow.values.key}: {subRow.values.value}
+                  {subRow.subRows && subRow.subRows.map(renderRow)}
+                </div>
+              );
+            })}
+          </td>
+        </tr>
+      ) : null}
+    </React.Fragment>
+  );
+}
+
 function Table({ columns, data }) {
   const {
     getTableProps,
@@ -12,6 +39,7 @@ function Table({ columns, data }) {
     state: { expanded }
   } = useTable({ columns, data }, useExpanded);
 
+  
   return (
     <table {...getTableProps()}>
       <thead>
@@ -26,38 +54,15 @@ function Table({ columns, data }) {
       <tbody {...getTableBodyProps()}>
         {rows.map((row) => {
           prepareRow(row);
-          return (
-            <React.Fragment key={row.getRowProps().key}>
-              <tr>
-                {row.cells.map((cell) => {
-                  return (
-                    <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
-                  );
-                })}
-              </tr>
-              {row.isExpanded ? (
-                <tr>
-                  <td colSpan={visibleColumns.length}>
-                    {row.values.key} Details:
-                    {row.subRows.map((subRow) => {
-                      return (
-                        <div key={subRow.id}>
-                          {subRow.values.key}: {subRow.values.value}
-                        </div>
-                      );
-                    })}
-                  </td>
-                </tr>
-              ) : null}
-            </React.Fragment>
-          );
+          return renderRow(row, visibleColumns);
 
-          
+
         })}
       </tbody>
     </table>
   );
 }
+
 
 export default function App() {
   const columns = useMemo(
