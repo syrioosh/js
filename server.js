@@ -15,6 +15,7 @@ let token = null;
 let tokenExpiry = null;
 
 const app = express();
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 app.use(async (req, res, next) => {
   // If we don't have a token or if it's expired, fetch it
@@ -50,11 +51,29 @@ app.use('/', async (req, res) => {
       headers: req.headers,
       data: req.body
     });
-    res.send(response.data);
+
+    // Forward headers from the original response
+    Object.entries(response.headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+
+    res.status(response.status).send(response.data);
+
   } catch (error) {
-    res.status(500).send(error.message || "Internal server error");
+    if (error.response) {
+      // If the request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      Object.entries(error.response.headers).forEach(([key, value]) => {
+        res.setHeader(key, value);
+      });
+      res.status(error.response.status).send(error.response.data);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      res.status(500).send(error.message || "Internal server error");
+    }
   }
 });
+
 
 app.listen(3000, () => {
   console.log(`Server is running on http://localhost:3000 in ${process.env.ENV} environment`);
